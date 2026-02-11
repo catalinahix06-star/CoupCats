@@ -551,6 +551,47 @@ OLS_coup <- lm(coup_attempt ~
 #Breusch-Pagan test, if significant, heteroscedasticity probable in MLE model, further testing (hetprobit)
 bptest(OLS_coup)
 
+#Measuring Overall LogLikelihood Fit 
+logLik(coup_probit) #This is -2969.378 (df=18) 
+
+null_model <- glm(coup_attempt ~ 1, #R^2 McFadden = 0.212, this means our model fits well
+                  data = base_data,
+                  family = binomial(link="logit"))
+
+                          
+################----------------------------- Doing some tests for calibration, and fit, etc... -----------------------------################################
+#Measuring Overall LogLikelihood Fit 
+logLik(coup_probit) #This is -2969.378 (df=18) 
+
+null_model <- glm(coup_attempt ~ 1, #R^2 McFadden = 0.212, this means our model fits well
+                  data = base_data,
+                  family = binomial(link="logit"))
+1 - (as.numeric(logLik(coup_logit)) /
+       as.numeric(logLik(null_model))) #0.211924, *This is really good* will need to use base_data2, 
+    #Loglik shows that Model is statistically stable, Predictors meaningfully improve fit, Not being driven by outliers, Strong explanatory power for binary political data
+
+
+#AUC (Area under ROC Curve), for coups: 0.7 to 0.8 is strong, checks for discrimination ability 
+#This is a really good test for however I am having some trouble running it
+#What this run, P(model assigns higher probability to a random coup case than a random non-coup case)
+install.packages("pROC") 
+library(pROC)
+
+pred_probs <- predict(coup_probit, type = "response") 
+
+pred_class <- ifelse(pred_probs > 0.1, 1, 0)
+mean(pred_class == base_data$coup_attempt) #0.99658, need to use base_data2
+
+roc_obj <- roc(base_data$coup_attempt, pred_probs)
+auc(roc_obj) 
+
+#Brier Score: checks for are proability numerically closeto the true outcomes and good for calibration
+mean((pred_probs - base_data$coup_attempt)^2) #got 0.003433091  
+mean((mean(base_data$coup_attempt) - base_data$coup_attempt)^2) #compared to null, I got 0.003402321 
+                            #this is actually slightly worse than the null, while it improves loglik, it does not improve average squared probability error 
+
+####################################--------------------------END, but to  be continued-----------------------------#################################################
+                          
 # --------------------------- Model developing --------------------------- #
 
 # Define transformations
